@@ -3,6 +3,15 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import MedicineSearchForm from './features/medicines/formpage'
+import AllMedicines from './features/medicines/allmedicines'
+import MedicineDashboard from './features/medicines/dashboard'
+import MedicineDetail from './features/medicines/medicineDetail'
+import AddPatientForm from './features/paitents/addpaitents'
+import EditPatientForm from './features/paitents/editPatient'
+import ViewPatient from './features/paitents/viewpaitent'
+import PatientDashboard from './features/paitents/dashboard'
+import AllPatients from './features/paitents/allpatients'
+
 
 const App = () => {
   return (
@@ -14,7 +23,16 @@ const App = () => {
                  
             {/* Routes will go here */}
             <Routes>
-              <Route path="/" element={ <MedicineSearchForm />} />
+              <Route path="/" element={<MedicineDashboard />} />
+              <Route path="/medicines" element={<MedicineDashboard />} />
+              <Route path="/medicines/all" element={<AllMedicines />} />
+              <Route path="/medicines/search" element={<MedicineSearchForm />} />
+              <Route path="/medicines/:id" element={<MedicineDetail />} />
+              <Route path="/patients" element={<PatientDashboard />} />
+              <Route path="/patients/all" element={<AllPatients />} />
+              <Route path="/patients/add" element={<AddPatientForm />} />
+              <Route path="/patients/edit/:id" element={<EditPatientForm />} />
+              <Route path="/patients/:id" element={<ViewPatient />} />
               <Route path="/about" element={<div>About Page Content</div>} />
               <Route path="/contact" element={<div>Contact Page Content</div>} />
             </Routes>

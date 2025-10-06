@@ -11,6 +11,8 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Home', path: '/' },
+    { name: 'Medicines', path: '/medicines' },
+    { name: 'Patients', path: '/patients' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -21,7 +23,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-blue-600">Homeopathic</span>
+              <span className="text-2xl font-bold text-[#568F87]">Homeopathic</span>
             </Link>
           </div>
           
@@ -31,12 +33,12 @@ const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.path}
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-700 hover:text-[#568F87] px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 {link.name}
               </Link>
             ))}
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+            <button className="bg-[#568F87] text-white px-4 py-2 rounded-md hover:bg-[#568F87] transition-colors">
               Book Appointment
             </button>
           </div>
@@ -45,7 +47,7 @@ const Navbar = () => {
           <div className="flex md:hidden items-center">
             <button
               onClick={toggleMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 focus:outline-none"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-[#568F87] focus:outline-none"
               aria-expanded="false"
             >
               <span className="sr-only">Open main menu</span>
