@@ -3,6 +3,7 @@ const databaseManager = require('../../core/database-manager');
 class MedicinesRepository {
   constructor() {
     this.dbManager = databaseManager;
+    this.dbManager.getConnection();
   }
 
   /**
@@ -18,7 +19,7 @@ class MedicinesRepository {
   async getAll(filters = {}, page = 1, limit = 10) {
     try {
       const offset = (page - 1) * limit;
-      let query = 'SELECT * FROM medicines WHERE 1=1';
+      let query = 'SELECT * FROM remedies WHERE 1=1';
       const params = [];
 
       // Add filters if provided
@@ -54,7 +55,7 @@ class MedicinesRepository {
   async search(searchTerm) {
     try {
       const query = `
-        SELECT * FROM medicines 
+        SELECT * FROM remedies 
         WHERE name LIKE ? 
         OR symptoms LIKE ? 
         OR indications LIKE ?
@@ -74,7 +75,7 @@ class MedicinesRepository {
   async getById(id) {
     try {
       const medicine = await this.dbManager.get(
-        'SELECT * FROM medicines WHERE id = ?',
+        'SELECT * FROM remedies WHERE id = ?',
         [id]
       );
       return medicine;
@@ -91,7 +92,7 @@ class MedicinesRepository {
   async getByCategory(category) {
     try {
       return await this.dbManager.all(
-        'SELECT * FROM medicines WHERE category = ?',
+        'SELECT * FROM remedies WHERE category = ?',
         [category]
       );
     } catch (err) {
@@ -107,7 +108,7 @@ class MedicinesRepository {
   async getByPotency(potency) {
     try {
       return await this.dbManager.all(
-        'SELECT * FROM medicines WHERE potency = ?',
+        'SELECT * FROM remedies WHERE potency = ?',
         [potency]
       );
     } catch (err) {
@@ -122,7 +123,7 @@ class MedicinesRepository {
   async getCategories() {
     try {
       return await this.dbManager.all(
-        'SELECT DISTINCT category FROM medicines ORDER BY category'
+        'SELECT DISTINCT category FROM remedies ORDER BY category'
       );
     } catch (err) {
       throw new Error(`Failed to get categories: ${err.message}`);
@@ -136,7 +137,7 @@ class MedicinesRepository {
   async getPotencies() {
     try {
       return await this.dbManager.all(
-        'SELECT DISTINCT potency FROM medicines ORDER BY potency'
+        'SELECT DISTINCT potency FROM remedies ORDER BY potency'
       );
     } catch (err) {
       throw new Error(`Failed to get potencies: ${err.message}`);

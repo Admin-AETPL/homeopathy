@@ -1,4 +1,4 @@
-const patientsService = require('./patients.service');
+ const patientsService = require('./patients.service');
 
 class PatientsController {
   async getAll(req, res) {
@@ -25,19 +25,67 @@ class PatientsController {
 
   async create(req, res) {
     try {
-      const patient = await patientsService.create(req.body);
+      const patientData = {
+        name: req.body.name,
+        age: req.body.age,
+        gender: req.body.gender,
+        contact: req.body.contact,
+        address: req.body.address,
+        dateOfBirth: req.body.dateOfBirth,
+        bloodGroup: req.body.bloodGroup,
+        maritalStatus: req.body.maritalStatus,
+        occupation: req.body.occupation,
+        alternateContactNumber: req.body.alternateContactNumber,
+        email: req.body.email,
+        allergies: req.body.allergies,
+        chronicDiseases: req.body.chronicDiseases,
+        familyHistory: req.body.familyHistory,
+        pastMedicalHistory: req.body.pastMedicalHistory,
+        lifestyle: req.body.lifestyle,
+        registrationDate: req.body.registrationDate,
+        lastVisitDate: req.body.lastVisitDate
+      };
+
+      const patient = await patientsService.create(patientData);
       res.status(201).json(patient);
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      res.status(400).json({ 
+        message: error.message,
+        errors: error.message.split('; ')
+      });
     }
   }
 
   async update(req, res) {
     try {
-      const patient = await patientsService.update(req.params.id, req.body);
+      const patientData = {
+        name: req.body.name,
+        age: req.body.age,
+        gender: req.body.gender,
+        contact: req.body.contact,
+        address: req.body.address,
+        dateOfBirth: req.body.dateOfBirth,
+        bloodGroup: req.body.bloodGroup,
+        maritalStatus: req.body.maritalStatus,
+        occupation: req.body.occupation,
+        alternateContactNumber: req.body.alternateContactNumber,
+        email: req.body.email,
+        allergies: req.body.allergies,
+        chronicDiseases: req.body.chronicDiseases,
+        familyHistory: req.body.familyHistory,
+        pastMedicalHistory: req.body.pastMedicalHistory,
+        lifestyle: req.body.lifestyle,
+        registrationDate: req.body.registrationDate,
+        lastVisitDate: req.body.lastVisitDate
+      };
+
+      const patient = await patientsService.update(req.params.id, patientData);
       res.json(patient);
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      res.status(400).json({ 
+        message: error.message,
+        errors: error.message.split('; ')
+      });
     }
   }
 

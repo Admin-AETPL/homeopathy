@@ -3,6 +3,7 @@ const databaseManager = require('../../core/database-manager');
 class PatientsRepository {
   constructor() {
     this.dbManager = databaseManager;
+    this.dbManager.getConnection();
   }
 
   async getAll() {
@@ -23,25 +24,47 @@ class PatientsRepository {
     }
   }
 
-  async create({ name, age, gender, contact, address }) {
+  async create(patientData) {
     try {
+      const fields = [
+        'name', 'age', 'gender', 'contact', 'address', 'dateOfBirth',
+        'bloodGroup', 'maritalStatus', 'occupation', 'alternateContactNumber',
+        'email', 'allergies', 'chronicDiseases', 'familyHistory',
+        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate'
+      ];
+      
+      const placeholders = fields.map(() => '?').join(', ');
+      const values = fields.map(field => patientData[field]);
+      
       const result = await this.dbManager.run(
-        'INSERT INTO patients (name, age, gender, contact, address) VALUES (?, ?, ?, ?, ?)', 
-        [name, age, gender, contact, address]
+        `INSERT INTO patients (${fields.join(', ')}) VALUES (${placeholders})`,
+        values
       );
-      return { id: result.lastID, name, age, gender, contact, address };
+      
+      return { id: result.lastID, ...patientData };
     } catch (err) {
       throw new Error(`Failed to create patient: ${err.message}`);
     }
   }
 
-  async update(id, { name, age, gender, contact, address }) {
+  async update(id, patientData) {
     try {
+      const fields = [
+        'name', 'age', 'gender', 'contact', 'address', 'dateOfBirth',
+        'bloodGroup', 'maritalStatus', 'occupation', 'alternateContactNumber',
+        'email', 'allergies', 'chronicDiseases', 'familyHistory',
+        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate'
+      ];
+      
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      const values = [...fields.map(field => patientData[field]), id];
+      
       await this.dbManager.run(
-        'UPDATE patients SET name = ?, age = ?, gender = ?, contact = ?, address = ? WHERE id = ?', 
-        [name, age, gender, contact, address, id]
+        `UPDATE patients SET ${setClause} WHERE id = ?`,
+        values
       );
-      return { id, name, age, gender, contact, address };
+      
+      return { id, ...patientData };
     } catch (err) {
       throw new Error(`Failed to update patient: ${err.message}`);
     }

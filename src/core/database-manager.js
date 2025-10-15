@@ -87,7 +87,7 @@ class DatabaseManager {
     }
     
     // Fallback to hardcoded path for compatibility
-    const hardcodedPath = 'C:\\Users\\LENOVO\\Documents\\homeopathic.db';
+    const hardcodedPath = 'C:\\Users\\LENOVO\\Documents\\homeopathy.db';
     if (require('fs').existsSync(hardcodedPath)) {
       return hardcodedPath;
     }
