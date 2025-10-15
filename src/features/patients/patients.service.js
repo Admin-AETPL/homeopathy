@@ -31,7 +31,7 @@ class PatientsService {
   }
 
   create(patientData) {
-    this.validatePatientData(patientData);
+    // this.validatePatientData(patientData);
     
     // Set default values for dates if not provided
     if (!patientData.registrationDate) {

@@ -43,8 +43,17 @@ class PatientsController {
         pastMedicalHistory: req.body.pastMedicalHistory,
         lifestyle: req.body.lifestyle,
         registrationDate: req.body.registrationDate,
-        lastVisitDate: req.body.lastVisitDate
+        lastVisitDate: req.body.lastVisitDate,
+        doctorNotes: req.body.doctorNotes,
+        status: req.body.status,
+        constitutionalType: req.body.constitutionalType,
+        miasmaticBackground: req.body.miasmaticBackground,
+        mentals: req.body.mentals,
+        modalities: req.body.modalities,
+        physicals: req.body.physicals,
+        visits: req.body.visits
       };
+      console.log(patientData);
 
       const patient = await patientsService.create(patientData);
       res.status(201).json(patient);
@@ -76,7 +85,15 @@ class PatientsController {
         pastMedicalHistory: req.body.pastMedicalHistory,
         lifestyle: req.body.lifestyle,
         registrationDate: req.body.registrationDate,
-        lastVisitDate: req.body.lastVisitDate
+        lastVisitDate: req.body.lastVisitDate,
+        doctorNotes: req.body.doctorNotes,
+        status: req.body.status,
+        constitutionalType: req.body.constitutionalType,
+        miasmaticBackground: req.body.miasmaticBackground,
+        mentals: req.body.mentals,
+        modalities: req.body.modalities,
+        physicals: req.body.physicals,
+        visits: req.body.visits
       };
 
       const patient = await patientsService.update(req.params.id, patientData);

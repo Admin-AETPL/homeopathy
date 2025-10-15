@@ -30,7 +30,9 @@ class PatientsRepository {
         'name', 'age', 'gender', 'contact', 'address', 'dateOfBirth',
         'bloodGroup', 'maritalStatus', 'occupation', 'alternateContactNumber',
         'email', 'allergies', 'chronicDiseases', 'familyHistory',
-        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate'
+        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate',
+        'doctorNotes', 'status', 'constitutionalType', 'miasmaticBackground',
+        'mentals', 'modalities', 'physicals', 'visits'
       ];
       
       const placeholders = fields.map(() => '?').join(', ');
@@ -53,7 +55,9 @@ class PatientsRepository {
         'name', 'age', 'gender', 'contact', 'address', 'dateOfBirth',
         'bloodGroup', 'maritalStatus', 'occupation', 'alternateContactNumber',
         'email', 'allergies', 'chronicDiseases', 'familyHistory',
-        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate'
+        'pastMedicalHistory', 'lifestyle', 'registrationDate', 'lastVisitDate',
+        'doctorNotes', 'status', 'constitutionalType', 'miasmaticBackground',
+        'mentals', 'modalities', 'physicals', 'visits'
       ];
       
       const setClause = fields.map(field => `${field} = ?`).join(', ');
