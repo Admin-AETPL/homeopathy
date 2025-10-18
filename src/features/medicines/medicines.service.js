@@ -2,10 +2,37 @@ const medicinesRepository = require('./medicines.repository');
 
 class MedicinesService {
   /**
-   * Get medicines with filtering and pagination
+   * Get medicines with pagination
    */
   async getMedicines(filters = {}, page = 1, limit = 10) {
-    return medicinesRepository.getAll(filters, page, limit);
+    const remedies = await medicinesRepository.getAll(filters, page, limit);
+    const sectionsData = await medicinesRepository.getSectionsWithRemedies();
+    
+    // Map sections to their respective remedies with restructured format
+    const remediesWithSections = remedies.map(remedy => {
+      const sections = sectionsData.filter(section => section.remedy_id === remedy.id);
+      
+      // Find the Remedy section to get the medicine name
+      const remedySection = sections.find(s => s.section_name === 'Remedy');
+      
+      // Filter out Remedy section and clean up section objects
+      const cleanedSections = sections
+        .filter(s => s.section_name !== 'Remedy')
+        .map(s => ({
+          id: s.id,
+          section_name: s.section_name,
+          section_text: s.section_text
+        }));
+
+      return {
+        id: remedy.id,
+        url: remedy.url,
+        name: remedySection ? remedySection.section_text : '',
+        sections: cleanedSections
+      };
+    });
+
+    return remediesWithSections;
   }
 
   /**
@@ -43,6 +70,16 @@ class MedicinesService {
   }
 
   /**
+   * Filter medicines by section name and optional text
+   */
+  async filterBySection(sectionName, sectionText) {
+    if (!sectionName) {
+      throw new Error('Section name is required');
+    }
+    return medicinesRepository.filterBySection(sectionName, sectionText);
+  }
+
+  /**
    * Get medicines by potency
    */
   async getMedicinesByPotency(potency) {
@@ -64,6 +101,13 @@ class MedicinesService {
    */
   async getPotencies() {
     return medicinesRepository.getPotencies();
+  }
+
+  /**
+   * Get sections with their associated remedy information
+   */
+  async getSections(remedyId) {
+    return medicinesRepository.getSectionsWithRemedies(remedyId);
   }
 }
 

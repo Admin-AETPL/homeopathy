@@ -2,9 +2,11 @@ const express = require('express');
 const usersRoutes = require('../features/users/users.routes');
 const patientsRoutes = require('../features/patients/patients.routes');
 const medicinesRoutes = require('../features/medicines/medicines.routes');
+const cors = require('cors');
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {

@@ -18,11 +18,11 @@ class PatientsService {
     if (!patientData.contact) errors.push('Contact number is required');
     
     // Field type validations
-    if (patientData.age && !Number.isInteger(patientData.age)) errors.push('Age must be a number');
-    if (patientData.gender && ![0, 1, 2].includes(patientData.gender)) errors.push('Invalid gender value');
+    if (patientData.age && !Number.isInteger(Number(patientData.age))) errors.push('Age must be a valid number');
+    if (patientData.gender && !['Male', 'Female', 'Other'].includes(patientData.gender)) errors.push('Gender must be Male, Female, or Other');
     if (patientData.email && !patientData.email.includes('@')) errors.push('Invalid email format');
-    if (patientData.alternateContactNumber && typeof patientData.alternateContactNumber !== 'number') {
-      errors.push('Alternate contact number must be a number');
+    if (patientData.alternateContactNumber && !/^\+?\d+$/.test(patientData.alternateContactNumber)) {
+      errors.push('Alternate contact number must contain only digits');
     }
     
     if (errors.length > 0) {

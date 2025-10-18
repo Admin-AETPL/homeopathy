@@ -10,18 +10,8 @@ class PatientsController {
     }
   }
 
-  async getById(req, res) {
-    try {
-      const patient = await patientsService.getById(req.params.id);
-      if (patient) {
-        res.json(patient);
-      } else {
-        res.status(404).json({ message: 'Patient not found' });
-      }
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  }
+
+  
 
   async create(req, res) {
     try {
@@ -54,7 +44,6 @@ class PatientsController {
         visits: req.body.visits
       };
       console.log(patientData);
-
       const patient = await patientsService.create(patientData);
       res.status(201).json(patient);
     } catch (error) {
