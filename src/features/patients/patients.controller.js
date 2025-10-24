@@ -1,6 +1,16 @@
  const patientsService = require('./patients.service');
 
 class PatientsController {
+  constructor() {
+    // Bind all methods to this instance
+    this.getAll = this.getAll.bind(this);
+    this.getById = this.getById.bind(this);
+    this.create = this.create.bind(this);
+    this.update = this.update.bind(this);
+    this.delete = this.delete.bind(this);
+    this.search = this.search.bind(this);
+  }
+
   async getAll(req, res) {
     try {
       const patients = await patientsService.getAll();
@@ -12,6 +22,19 @@ class PatientsController {
 
 
   
+
+  async getById(req, res) {
+    try {
+      const patient = await patientsService.getById(req.params.id);
+      if (patient) {
+        res.json(patient);
+      } else {
+        res.status(404).json({ message: 'Patient not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 
   async create(req, res) {
     try {
