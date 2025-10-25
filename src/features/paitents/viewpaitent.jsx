@@ -18,6 +18,19 @@ const ViewPatient = () => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
+  
+  // Helper function to safely parse JSON strings
+  const parseJsonField = (field) => {
+    if (!field) return null;
+    if (typeof field === 'object') return field;
+    
+    try {
+      return JSON.parse(field);
+    } catch (e) {
+      console.error(`Error parsing JSON field:`, e);
+      return null;
+    }
+  };
 
   // Fetch patient data from API
   const fetchPatientData = async () => {
@@ -85,10 +98,10 @@ const ViewPatient = () => {
             Edit Patient
           </Link>
           <Link
-            to="/patients"
+            to="/patients/all"
             className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors text-sm"
           >
-            Back to List
+            Back to All Patients
           </Link>
         </div>
       </div>
@@ -146,7 +159,7 @@ const ViewPatient = () => {
           <h3 className="text-lg font-medium text-gray-800 mb-3">Contact Information</h3>
           <div className="space-y-2">
             <p>
-              <span className="font-medium">Phone:</span> {patient.contactNumber || 'N/A'}
+              <span className="font-medium">Phone:</span> {patient.contact || 'N/A'}
             </p>
             <p>
               <span className="font-medium">Alternate Phone:</span> {patient.alternateContactNumber || 'N/A'}
@@ -157,13 +170,22 @@ const ViewPatient = () => {
             {patient.address && (
               <div>
                 <span className="font-medium">Address:</span>
-                <p className="ml-4">
-                  {patient.address.street && `${patient.address.street}, `}
-                  {patient.address.city && `${patient.address.city}, `}
-                  {patient.address.state && `${patient.address.state}, `}
-                  {patient.address.postalCode && `${patient.address.postalCode}, `}
-                  {patient.address.country || ''}
-                </p>
+                {(() => {
+                  const addressObj = parseJsonField(patient.address);
+                  if (addressObj) {
+                    return (
+                      <p className="ml-4">
+                        {addressObj.street && `${addressObj.street}, `}
+                        {addressObj.city && `${addressObj.city}, `}
+                        {addressObj.state && `${addressObj.state}, `}
+                        {addressObj.postalCode && `${addressObj.postalCode}, `}
+                        {addressObj.country || ''}
+                      </p>
+                    );
+                  } else {
+                    return <p className="ml-4">Address information unavailable</p>;
+                  }
+                })()}
               </div>
             )}
           </div>
@@ -176,17 +198,25 @@ const ViewPatient = () => {
             <p>
               <span className="font-medium">Allergies:</span>
               <span className="block ml-4 text-sm">
-                {patient.allergies && patient.allergies.length > 0 
-                  ? patient.allergies.join(', ') 
-                  : 'None recorded'}
+                {(() => {
+                  const allergiesArr = parseJsonField(patient.allergies);
+                  if (allergiesArr && allergiesArr.length > 0) {
+                    return allergiesArr.join(', ');
+                  }
+                  return 'None recorded';
+                })()}
               </span>
             </p>
             <p>
               <span className="font-medium">Chronic Diseases:</span>
               <span className="block ml-4 text-sm">
-                {patient.chronicDiseases && patient.chronicDiseases.length > 0 
-                  ? patient.chronicDiseases.join(', ') 
-                  : 'None recorded'}
+                {(() => {
+                  const diseasesArr = parseJsonField(patient.chronicDiseases);
+                  if (diseasesArr && diseasesArr.length > 0) {
+                    return diseasesArr.join(', ');
+                  }
+                  return 'None recorded';
+                })()}
               </span>
             </p>
             <p>
@@ -204,35 +234,45 @@ const ViewPatient = () => {
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-medium text-gray-800 mb-3">Lifestyle Information</h3>
           <div className="space-y-2">
-            {patient.lifestyle && (
-              <>
-                <p>
-                  <span className="font-medium">Diet:</span>
-                  <span className="block ml-4 text-sm">{patient.lifestyle.diet || 'None recorded'}</span>
-                </p>
-                <p>
-                  <span className="font-medium">Exercise:</span>
-                  <span className="block ml-4 text-sm">{patient.lifestyle.exercise || 'None recorded'}</span>
-                </p>
-                <p>
-                  <span className="font-medium">Sleep:</span>
-                  <span className="block ml-4 text-sm">{patient.lifestyle.sleep || 'None recorded'}</span>
-                </p>
-                <p>
-                  <span className="font-medium">Addictions:</span>
-                  <span className="block ml-4 text-sm">
-                    {patient.lifestyle.addictions && patient.lifestyle.addictions.length > 0 
-                      ? patient.lifestyle.addictions.join(', ') 
-                      : 'None recorded'}
-                  </span>
-                </p>
-              </>
-            )}
+            {(() => {
+              const lifestyle = parseJsonField(patient.lifestyle);
+              if (lifestyle) {
+                return (
+                  <>
+                    <p>
+                      <span className="font-medium">Diet:</span>
+                      <span className="block ml-4 text-sm">{lifestyle.diet || 'None recorded'}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium">Exercise:</span>
+                      <span className="block ml-4 text-sm">{lifestyle.exercise || 'None recorded'}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium">Sleep:</span>
+                      <span className="block ml-4 text-sm">{lifestyle.sleep || 'None recorded'}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium">Addictions:</span>
+                      <span className="block ml-4 text-sm">
+                        {lifestyle.addictions && lifestyle.addictions.length > 0 
+                          ? lifestyle.addictions.join(', ') 
+                          : 'None recorded'}
+                      </span>
+                    </p>
+                  </>
+                );
+              }
+              return <p>No lifestyle information available</p>;
+            })()}
           </div>
         </div>
 
         {/* Medical History */}
         {patient.medicalHistory && (
+          patient.medicalHistory.previousIllnesses ||
+          patient.medicalHistory.surgeries ||
+          patient.medicalHistory.chronicConditions
+        ) && (
           <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
             <h3 className="text-lg font-medium text-gray-800 mb-3">Medical History</h3>
             <div className="space-y-2">
@@ -274,52 +314,70 @@ const ViewPatient = () => {
             
             <p>
               <span className="font-medium">Miasmatic Background:</span>{' '}
-              {patient.miasmaticBackground && patient.miasmaticBackground.length > 0
-                ? patient.miasmaticBackground.join(', ')
-                : 'N/A'}
+              {(() => {
+                const miasmaticArr = parseJsonField(patient.miasmaticBackground);
+                if (miasmaticArr && miasmaticArr.length > 0) {
+                  return miasmaticArr.join(', ');
+                }
+                return 'N/A';
+              })()}
             </p>
             
             <div className="md:col-span-2">
               <span className="font-medium">Mentals:</span>{' '}
               <span className="block ml-4 text-sm">
-                {patient.mentals && patient.mentals.length > 0
-                  ? patient.mentals.join(', ')
-                  : 'None recorded'}
+                {(() => {
+                  const mentalsArr = parseJsonField(patient.mentals);
+                  if (mentalsArr && mentalsArr.length > 0) {
+                    return mentalsArr.join(', ');
+                  }
+                  return 'None recorded';
+                })()}
               </span>
             </div>
             
             <div className="md:col-span-2">
               <span className="font-medium">Physicals:</span>{' '}
               <span className="block ml-4 text-sm">
-                {patient.physicals && patient.physicals.length > 0
-                  ? patient.physicals.join(', ')
-                  : 'None recorded'}
+                {(() => {
+                  const physicalsArr = parseJsonField(patient.physicals);
+                  if (physicalsArr && physicalsArr.length > 0) {
+                    return physicalsArr.join(', ');
+                  }
+                  return 'None recorded';
+                })()}
               </span>
             </div>
             
-            {patient.modalities && (
-              <div className="md:col-span-2">
-                <span className="font-medium">Modalities:</span>
-                <div className="ml-4">
-                  <p>
-                    <span className="font-medium text-sm">Better:</span>{' '}
-                    <span className="text-sm">
-                      {patient.modalities.better && patient.modalities.better.length > 0
-                        ? patient.modalities.better.join(', ')
-                        : 'None recorded'}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="font-medium text-sm">Worse:</span>{' '}
-                    <span className="text-sm">
-                      {patient.modalities.worse && patient.modalities.worse.length > 0
-                        ? patient.modalities.worse.join(', ')
-                        : 'None recorded'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
+            {(() => {
+              const modalities = parseJsonField(patient.modalities);
+              if (modalities) {
+                return (
+                  <div className="md:col-span-2">
+                    <span className="font-medium">Modalities:</span>
+                    <div className="ml-4">
+                      <p>
+                        <span className="font-medium text-sm">Better:</span>{' '}
+                        <span className="text-sm">
+                          {modalities.better && modalities.better.length > 0
+                            ? modalities.better.join(', ')
+                            : 'None recorded'}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-medium text-sm">Worse:</span>{' '}
+                        <span className="text-sm">
+                          {modalities.worse && modalities.worse.length > 0
+                            ? modalities.worse.join(', ')
+                            : 'None recorded'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
@@ -349,24 +407,32 @@ const ViewPatient = () => {
               <p>
                 <span className="font-medium">Total Visits:</span>{' '}
                 <span className="px-2 py-1 bg-[#E8F5F4] text-[#568F87] rounded-full text-xs">
-                  {patient.visits ? patient.visits.length : 0}
+                  {(() => {
+                    const visitsArr = parseJsonField(patient.visits);
+                    return visitsArr ? visitsArr.length : 0;
+                  })()}
                 </span>
               </p>
             </div>
             
             {/* Visit history section */}
-            {patient.visits && patient.visits.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-md font-medium text-gray-700 mb-4">Visit History</h4>
-                <div className="space-y-6">
-                  {patient.visits.map((visit, index) => (
+            {(() => {
+              const visitsArr = parseJsonField(patient.visits);
+              if (visitsArr && visitsArr.length > 0) {
+                return (
+                  <div className="mt-6">
+                    <h4 className="text-md font-medium text-gray-700 mb-4">Visit History</h4>
+                    <div className="space-y-6">
+                  {(() => {
+                    const visits = parseJsonField(patient.visits) || [];
+                    return visits.map((visit, index) => (
                     <div key={index} className="border-l-2 border-[#90D1CA] pl-4 pb-6">
                       <div className="flex justify-between items-start mb-2">
                         <h5 className="font-medium text-gray-800">
                           Visit on {formatDate(visit.date)}
                         </h5>
                         <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {index === 0 ? 'Latest' : `Visit #${patient.visits.length - index}`}
+                          {index === 0 ? 'Latest' : `Visit #${visits.length - index}`}
                         </span>
                       </div>
                       
@@ -439,10 +505,15 @@ const ViewPatient = () => {
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    ));
+                  })()}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            
           </div>
         </div>
       </div>

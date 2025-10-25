@@ -100,7 +100,7 @@ const AllMedicines = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
               </svg>
-              Back to Dashboard
+              {/* Back to Dashboard */}
             </button>
             <h1 className="text-3xl font-bold text-white">Homeopathic Medicines</h1>
           </div>
@@ -184,11 +184,6 @@ const AllMedicines = () => {
                       </p>
                     )}
                   </div>
-                  {medicine.rawSections?.Remedy && (
-                    <div className="mt-2 md:mt-0 md:ml-4 bg-[#E8F5F4] px-3 py-1.5 rounded-lg inline-block shadow-sm">
-                      <p className="text-xs font-medium text-[#568F87]">Remedy: <span className="font-bold">{medicine.rawSections.Remedy}</span></p>
-                    </div>
-                  )}
                 </div>
                 
                 {medicine.description && (
@@ -200,6 +195,38 @@ const AllMedicines = () => {
                 )}
                 
                 <div className="mt-4 pt-4 border-t border-gray-100">
+                  {/* Display section count for array format */}
+                  {Array.isArray(medicine.sections) && medicine.sections.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-[#568F87]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Sections:
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {medicine.sections
+                          .filter(s => s.section_name !== 'Remedy' && s.section_name !== 'Common Name' && s.section_name !== 'General')
+                          .slice(0, 3)
+                          .map((section, idx) => (
+                            <span 
+                              key={idx} 
+                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#E8F5F4] text-[#568F87] shadow-sm"
+                            >
+                              {section.section_name}
+                            </span>
+                          ))
+                        }
+                        {medicine.sections.filter(s => s.section_name !== 'Remedy' && s.section_name !== 'Common Name' && s.section_name !== 'General').length > 3 && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 shadow-sm">
+                            +{medicine.sections.filter(s => s.section_name !== 'Remedy' && s.section_name !== 'Common Name' && s.section_name !== 'General').length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Fallback for old object format */}
                   {medicine.properties && Object.entries(medicine.properties).some(([_, value]) => value) && (
                     <div className="mb-4">
                       <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">

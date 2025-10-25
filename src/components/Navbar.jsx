@@ -13,6 +13,7 @@ const Navbar = () => {
     { name: 'Home', path: '/' },
     { name: 'Medicines', path: '/medicines' },
     { name: 'Patients', path: '/patients' },
+    { name: 'Appointments', path: '/appointments' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -38,9 +39,12 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            <button className="bg-[#568F87] text-white px-4 py-2 rounded-md hover:bg-[#568F87] transition-colors">
+            <Link
+              to="/appointments/book"
+              className="bg-[#568F87] text-white px-4 py-2 rounded-md hover:bg-[#3E6A64] transition-colors inline-block"
+            >
               Book Appointment
-            </button>
+            </Link>
           </div>
           
           {/* Mobile menu button */}
@@ -75,9 +79,13 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            <button className="w-full text-left bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors mt-2">
+            <Link
+              to="/appointments/book"
+              className="w-full text-left bg-[#568F87] text-white px-3 py-2 rounded-md hover:bg-[#3E6A64] transition-colors mt-2 block"
+              onClick={() => setIsMenuOpen(false)}
+            >
               Book Appointment
-            </button>
+            </Link>
           </div>
         </div>
       )}

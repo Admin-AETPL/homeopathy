@@ -16,7 +16,7 @@ const AddPatientForm = () => {
     occupation: '',
     
     // Contact Information
-    contactNumber: '',
+    contact: '', // Using 'contact' to match backend field name
     alternateContactNumber: '',
     email: '',
     address: {
@@ -123,7 +123,7 @@ const AddPatientForm = () => {
         occupation: '',
         
         // Contact Information
-        contactNumber: '',
+        contact: '', // Using 'contact' to match backend field name
         alternateContactNumber: '',
         email: '',
         address: {
@@ -208,7 +208,7 @@ const AddPatientForm = () => {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
           </svg>
-          Back to Patients
+          {/* Back to Patients */}
         </button>
         <h2 className="text-2xl font-bold text-[#568F87]">Add New Patient</h2>
       </div>
@@ -361,14 +361,14 @@ const AddPatientForm = () => {
 
             {/* Contact Number */}
             <div>
-              <label htmlFor="contactNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Number*
               </label>
               <input
                 type="tel"
-                id="contactNumber"
-                name="contactNumber"
-                value={formData.contactNumber}
+                id="contact"
+                name="contact"
+                value={formData.contact}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#90D1CA]"
                 required

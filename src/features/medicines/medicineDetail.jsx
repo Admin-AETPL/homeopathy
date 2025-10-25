@@ -12,19 +12,55 @@ const MedicineDetail = () => {
   useEffect(() => {
     const fetchMedicineDetails = async () => {
       setLoading(true);
+      setError(null);
       try {
+        console.log('=== FETCHING MEDICINE DETAILS ===');
+        console.log('Medicine ID:', id);
+        console.log('API Base URL:', import.meta.env.VITE_API_BASE_URL);
+        console.log('Full URL:', `${import.meta.env.VITE_API_BASE_URL}/api/medicines/${id}`);
+        
         const result = await medicineApi.getMedicineById(id);
-        console.log('Medicine details:', result);
+        
+        console.log('=== RESULT RECEIVED ===');
+        console.log('Result:', result);
+        console.log('Result type:', typeof result);
+        console.log('Result keys:', result ? Object.keys(result) : 'null');
+        console.log('Has sections?', result?.sections ? 'YES' : 'NO');
+        console.log('Sections:', result?.sections);
+        console.log('Sections length:', result?.sections?.length);
+        
+        if (!result) {
+          console.error('No result returned from API');
+          setError('No medicine data received from server.');
+          return;
+        }
+        
+        if (!result.sections || result.sections.length === 0) {
+          console.warn('Result has no sections!');
+        }
+        
         setMedicine(result);
+        console.log('Medicine state set successfully');
       } catch (err) {
-        console.error('Error fetching medicine details:', err);
-        setError('Failed to load medicine details. Please try again.');
+        console.error('=== ERROR FETCHING MEDICINE ===');
+        console.error('Error object:', err);
+        console.error('Error message:', err.message);
+        console.error('Error response:', err.response);
+        console.error('Error response data:', err.response?.data);
+        console.error('Error response status:', err.response?.status);
+        setError(`Failed to load medicine details: ${err.response?.data?.message || err.message || 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMedicineDetails();
+    if (id) {
+      fetchMedicineDetails();
+    } else {
+      console.error('No medicine ID provided!');
+      setError('No medicine ID provided');
+      setLoading(false);
+    }
   }, [id]);
 
   if (loading) {
@@ -66,6 +102,34 @@ const MedicineDetail = () => {
     );
   }
 
+  // Helper function to get section value from array or object format
+  const getSectionValue = (sectionName) => {
+    if (!medicine) return null;
+    
+    // Check if sections is an array (new format)
+    if (Array.isArray(medicine.sections)) {
+      const section = medicine.sections.find(s => s.section_name === sectionName);
+      return section ? section.section_text : null;
+    }
+    // Check if rawSections is an object (old format)
+    if (medicine.rawSections && typeof medicine.rawSections === 'object') {
+      return medicine.rawSections[sectionName];
+    }
+    return null;
+  };
+
+  // Debug: Log medicine object
+  console.log('Medicine object in render:', medicine);
+  console.log('Medicine sections:', medicine?.sections);
+  console.log('Is sections array?', Array.isArray(medicine?.sections));
+
+  // Get medicine name and common name
+  const medicineName = medicine?.name || getSectionValue('Remedy') || 'Unknown Medicine';
+  const commonName = medicine?.commonName || getSectionValue('Common Name') || '';
+  const generalInfo = medicine?.description || getSectionValue('General') || '';
+  
+  console.log('Extracted values:', { medicineName, commonName, generalInfo });
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       {/* Back button */}
@@ -84,21 +148,16 @@ const MedicineDetail = () => {
         <div className="p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-[#568F87] mb-2">{medicine.name}</h1>
-              {medicine.commonName && (
-                <p className="text-gray-600 italic">Common name: {medicine.commonName}</p>
+              <h1 className="text-2xl font-bold text-[#568F87] mb-2">{medicineName}</h1>
+              {commonName && (
+                <p className="text-gray-600 italic">Common name: {commonName}</p>
               )}
             </div>
-            {medicine.rawSections?.Remedy && (
-              <div className="mt-2 md:mt-0 md:ml-4 bg-[#E8F5F4] px-4 py-2 rounded-lg inline-block">
-                <p className="text-sm font-medium text-[#568F87]">Remedy: <span className="font-bold">{medicine.rawSections.Remedy}</span></p>
-              </div>
-            )}
           </div>
-          {medicine.description && (
+          {generalInfo && (
             <div className="mb-2">
               <h2 className="text-lg font-semibold text-gray-800 mb-2">General</h2>
-              <p className="text-gray-700">{medicine.description}</p>
+              <p className="text-gray-700">{generalInfo}</p>
             </div>
           )}
         </div>
@@ -109,14 +168,29 @@ const MedicineDetail = () => {
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Medicine Information</h2>
           <div className="space-y-6">
-            {/* Create a Set of already displayed keys to avoid duplication */}
             {(() => {
               // Track displayed sections to avoid duplication
               const displayedSections = new Set(['Remedy', 'Common Name', 'General']);
               const sections = [];
               
-              // First add sections from rawSections
-              if (medicine.rawSections) {
+              // Handle array format (new database structure)
+              if (Array.isArray(medicine.sections)) {
+                medicine.sections
+                  .filter(section => section.section_text && !displayedSections.has(section.section_name))
+                  .forEach((section, index) => {
+                    displayedSections.add(section.section_name);
+                    sections.push(
+                      <div key={`section-${index}`} className="pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
+                        <h3 className="text-md font-medium text-[#568F87] mb-2">
+                          {section.section_name}
+                        </h3>
+                        <p className="text-gray-700 whitespace-pre-line">{section.section_text}</p>
+                      </div>
+                    );
+                  });
+              }
+              // Handle object format (old structure) - fallback
+              else if (medicine.rawSections && typeof medicine.rawSections === 'object') {
                 Object.entries(medicine.rawSections)
                   .filter(([key, value]) => value && !displayedSections.has(key))
                   .forEach(([key, value]) => {
@@ -126,24 +200,24 @@ const MedicineDetail = () => {
                         <h3 className="text-md font-medium text-[#568F87] mb-2">
                           {key}
                         </h3>
-                        <p className="text-gray-700">{value}</p>
+                        <p className="text-gray-700 whitespace-pre-line">{value}</p>
                       </div>
                     );
                   });
               }
               
               // Then add any properties not already displayed
-              if (medicine.properties) {
+              if (medicine.properties && typeof medicine.properties === 'object') {
                 Object.entries(medicine.properties)
                   .filter(([key, value]) => value && !displayedSections.has(key))
                   .forEach(([key, value]) => {
                     displayedSections.add(key);
                     sections.push(
-                      <div key={key} className="pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
+                      <div key={`prop-${key}`} className="pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
                         <h3 className="text-md font-medium text-[#568F87] mb-2">
-                          {key.charAt(0).toUpperCase() + key.slice(1)} {/* Capitalize the first letter */}
+                          {key.charAt(0).toUpperCase() + key.slice(1)}
                         </h3>
-                        <p className="text-gray-700">{value}</p>
+                        <p className="text-gray-700 whitespace-pre-line">{value}</p>
                       </div>
                     );
                   });

@@ -7,10 +7,12 @@ import AllMedicines from './features/medicines/allmedicines'
 import MedicineDashboard from './features/medicines/dashboard'
 import MedicineDetail from './features/medicines/medicineDetail'
 import AddPatientForm from './features/paitents/addpaitents'
-import EditPatientForm from './features/paitents/editPatient'
+import EditPatient from './features/paitents/editpatient'
 import ViewPatient from './features/paitents/viewpaitent'
 import PatientDashboard from './features/paitents/dashboard'
 import AllPatients from './features/paitents/allpatients'
+import BookAppointment from './features/appointments/bookAppointment'
+import AppointmentDashboard from './features/appointments/dashboard'
 
 
 const App = () => {
@@ -31,8 +33,10 @@ const App = () => {
               <Route path="/patients" element={<PatientDashboard />} />
               <Route path="/patients/all" element={<AllPatients />} />
               <Route path="/patients/add" element={<AddPatientForm />} />
-              <Route path="/patients/edit/:id" element={<EditPatientForm />} />
+              <Route path="/patients/edit/:id" element={<EditPatient />} />
               <Route path="/patients/:id" element={<ViewPatient />} />
+              <Route path="/appointments" element={<AppointmentDashboard />} />
+              <Route path="/appointments/book" element={<BookAppointment />} />
               <Route path="/about" element={<div>About Page Content</div>} />
               <Route path="/contact" element={<div>Contact Page Content</div>} />
             </Routes>

@@ -23,30 +23,69 @@ const AllPatients = () => {
     setError(null);
 
     try {
-      const response = await patientApi.getAllPatients({
-        page: currentPage,
-        limit: patientsPerPage,
-      });
+      // First, try to fetch with server-side pagination
+      let response;
+      try {
+        response = await patientApi.getAllPatients({
+          page: currentPage,
+          limit: patientsPerPage,
+          filters: searchTerm ? { search: searchTerm } : {}
+        });
+      } catch (err) {
+        console.warn('Error with paginated request, falling back to client-side pagination:', err);
+        // If paginated request fails, fetch all and handle pagination client-side
+        response = await patientApi.getAllPatients();
+      }
 
       console.log('API response:', response);
 
-      // Check if the response has the expected structure
+      // Handle different response formats
+      let patientsData = [];
+      let totalCount = 0;
+
+      // Case 1: Response has data.patients (expected format with pagination)
       if (response && response.data && response.data.patients) {
-        setPatients(response.data.patients);
-        
-        // Calculate total pages if pagination info is available
-        if (response.results) {
-          setTotalPages(Math.ceil(response.results / patientsPerPage));
-        }
-      } else if (response && Array.isArray(response)) {
-        // Handle case where response is directly an array of patients
-        setPatients(response);
-        setTotalPages(Math.ceil(response.length / patientsPerPage));
+        patientsData = response.data.patients;
+        totalCount = response.data.total || response.data.patients.length;
+      } 
+      // Case 2: Response is a direct array (no pagination)
+      else if (Array.isArray(response)) {
+        patientsData = response;
+        totalCount = response.length;
+      }
+      // Case 3: Response has data as array (alternative format)
+      else if (response && Array.isArray(response.data)) {
+        patientsData = response.data;
+        totalCount = response.data.length;
       } else {
-        // Handle case where response doesn't have expected structure
         console.warn('Unexpected API response structure:', response);
         setPatients([]);
+        setTotalPages(1);
+        return;
       }
+
+      // Apply client-side search if needed
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        patientsData = patientsData.filter(patient => 
+          (patient.name?.toLowerCase().includes(searchLower) ||
+           patient.contactNumber?.includes(searchTerm) ||
+           patient.email?.toLowerCase().includes(searchLower))
+        );
+        totalCount = patientsData.length;
+      }
+
+      // Apply client-side pagination if we have more than one page of data
+      const totalPages = Math.ceil(totalCount / patientsPerPage);
+      let paginatedPatients = patientsData;
+      
+      if (patientsData.length > patientsPerPage) {
+        const startIndex = (currentPage - 1) * patientsPerPage;
+        paginatedPatients = patientsData.slice(startIndex, startIndex + patientsPerPage);
+      }
+
+      setPatients(paginatedPatients);
+      setTotalPages(totalPages > 0 ? totalPages : 1);
     } catch (err) {
       console.error('Error fetching patients:', err);
       setError('Failed to load patient data. Please try again.');
@@ -58,18 +97,19 @@ const AllPatients = () => {
 
   // Handle patient search
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    // Reset to first page when search term changes
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    } else {
+      // If already on first page, trigger a new search
+      fetchPatients();
+    }
   };
 
-  // Filter patients based on search term
-  const filteredPatients = patients.filter((patient) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      patient.name?.toLowerCase().includes(searchLower) ||
-      patient.contactNumber?.includes(searchTerm) ||
-      patient.email?.toLowerCase().includes(searchLower)
-    );
-  });
+  // Use all patients for display (filtering is now done server-side)
+  const filteredPatients = patients;
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -84,11 +124,11 @@ const AllPatients = () => {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -102,7 +142,15 @@ const AllPatients = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">All Patients</h1>
+        <div className="flex items-center gap-4 bg-[#568F87] hover:bg-[#3E6A64] text-white font-medium py-2 px-4 rounded-lg transition-colors duration-300 shadow-sm flex items-center">
+          <Link to="/patients" className="text-white hover:underline flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {/* Back to Patient Dashboard */}
+          </Link>
+          <h1 className="text-2xl font-bold text-white">All Patients List</h1>
+        </div>
         <Link
           to="/patients/add"
           className="bg-[#90D1CA] hover:bg-[#568F87] text-white px-4 py-2 rounded-md transition-colors"
@@ -193,7 +241,7 @@ const AllPatients = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{patient.contactNumber || 'N/A'}</div>
+                        <div className="text-sm text-gray-500">{patient.contact || 'N/A'}</div>
                         <div className="text-sm text-gray-500">{patient.email || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -203,14 +251,16 @@ const AllPatients = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Link
-                          to={`/patients/${patient._id}`}
+                          to={`/patients/${patient.id}`}
                           className="text-[#568F87] hover:text-[#90D1CA] mr-3"
+                          onClick={() => console.log('Viewing patient with ID:', patient.id, 'Full patient:', patient)}
                         >
                           View
                         </Link>
                         <Link
-                          to={`/patients/edit/${patient._id}`}
+                          to={`/patients/edit/${patient.id}`}
                           className="text-indigo-600 hover:text-indigo-900"
+                          onClick={() => console.log('Editing patient with ID:', patient.id, 'Full patient:', patient)}
                         >
                           Edit
                         </Link>
@@ -229,47 +279,81 @@ const AllPatients = () => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <nav className="flex items-center">
+          {!loading && totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+              <nav className="flex items-center gap-1">
+                <button
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="First page"
+                >
+                  &laquo;
+                </button>
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1 rounded-md mr-2 ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Previous page"
                 >
-                  Previous
+                  &lsaquo;
                 </button>
-                <div className="flex space-x-1">
-                  {[...Array(totalPages).keys()].map((page) => (
+                
+                {/* Show page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Calculate which page numbers to show based on current page
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
                     <button
-                      key={page + 1}
-                      onClick={() => handlePageChange(page + 1)}
-                      className={`px-3 py-1 rounded-md ${currentPage === page + 1 ? 'bg-[#90D1CA] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-1 rounded-md border ${
+                        currentPage === pageNum 
+                          ? 'bg-[#90D1CA] text-white border-[#90D1CA] font-medium' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                      aria-current={currentPage === pageNum ? 'page' : undefined}
                     >
-                      {page + 1}
+                      {pageNum}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
+                
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded-md ml-2 ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Next page"
                 >
-                  Next
+                  &rsaquo;
                 </button>
+                <button
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Last page"
+                >
+                  &raquo;
+                </button>
+                
+                <div className="ml-4 text-sm text-gray-600 flex items-center">
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <span className="mx-2">•</span>
+                  <span>Showing {patients.length} patients</span>
+                </div>
               </nav>
             </div>
           )}
-
-          {/* Back to dashboard */}
-          <div className="mt-8">
-            <Link to="/patients" className="text-[#568F87] hover:underline flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Patient Dashboard
-            </Link>
-          </div>
         </>
       )}
     </div>

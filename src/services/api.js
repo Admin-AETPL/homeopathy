@@ -78,248 +78,85 @@ const medicineApi = {
   searchMedicines: async (query, options = {}) => {
     try {
       console.log('Searching medicines with query:', query);
+      console.log('Search options:', options);
       
-      // First try the specific endpoint for searching by common name or medicine name
-      try {
-        // Use the correct endpoint format as shown in the example
-        // http://192.168.18.83:3000/api/medicines/common-name?name=hemlock
-        const response = await api.get('/api/medicines/common-name', {
-          params: {
-            name: query, // This is the required parameter name based on the example
-            limit: options.limit || 20,
-            page: options.page || 1,
-            ...options.filters,
-          },
-        });
-        
-        console.log('Search endpoint response:', response.data);
-        
-        // Format the response data to match our frontend expectations
-        let formattedData = [];
-        
-        if (Array.isArray(response.data)) {
-          formattedData = response.data.map(formatMedicineData);
-        } else if (response.data && response.data.medicines && Array.isArray(response.data.medicines)) {
-          formattedData = response.data.medicines.map(formatMedicineData);
-        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          formattedData = response.data.data.map(formatMedicineData);
-        }
-        
-        // If we found results, return them
-        if (formattedData.length > 0) {
-          return formattedData;
-        }
-        
-        // If no results, try searching by remedy name directly
-        console.log('No results found with common-name search, trying remedy-name search');
-        const remedyResponse = await api.get('/api/medicines/remedy-name', {
-          params: {
-            name: query,
-            limit: options.limit || 20,
-            page: options.page || 1,
-          },
-        });
-        
-        console.log('Remedy search endpoint response:', remedyResponse.data);
-        
-        // Format the remedy search response
-        if (Array.isArray(remedyResponse.data)) {
-          formattedData = remedyResponse.data.map(formatMedicineData);
-        } else if (remedyResponse.data && remedyResponse.data.medicines && Array.isArray(remedyResponse.data.medicines)) {
-          formattedData = remedyResponse.data.medicines.map(formatMedicineData);
-        } else if (remedyResponse.data && remedyResponse.data.data && Array.isArray(remedyResponse.data.data)) {
-          formattedData = remedyResponse.data.data.map(formatMedicineData);
-        }
-        
-        // If still no results, try the general search endpoint
-        if (formattedData.length === 0) {
-          console.log('No results found with remedy-name search, trying general search');
-          const generalResponse = await api.get('/api/medicines/search', {
-            params: {
-              q: query,
-              limit: options.limit || 20,
-              page: options.page || 1,
-            },
-          });
-          
-          console.log('General search endpoint response:', generalResponse.data);
-          
-          // Format the general search response
-          if (Array.isArray(generalResponse.data)) {
-            formattedData = generalResponse.data.map(formatMedicineData);
-          } else if (generalResponse.data && generalResponse.data.medicines && Array.isArray(generalResponse.data.medicines)) {
-            formattedData = generalResponse.data.medicines.map(formatMedicineData);
-          } else if (generalResponse.data && generalResponse.data.data && Array.isArray(generalResponse.data.data)) {
-            formattedData = generalResponse.data.data.map(formatMedicineData);
-          }
-        }
-        
-        // If still no results, try to manually filter from all medicines
-        if (formattedData.length === 0) {
-          console.log('No results found with API endpoints, trying manual filtering');
-          const allResponse = await api.get('/api/medicines', {
-            params: {
-              limit: 100, // Get more medicines to increase chance of finding matches
-              page: 1,
-            },
-          });
-          
-          let allMedicines = [];
-          
-          if (Array.isArray(allResponse.data)) {
-            allMedicines = allResponse.data;
-          } else if (allResponse.data && allResponse.data.medicines && Array.isArray(allResponse.data.medicines)) {
-            allMedicines = allResponse.data.medicines;
-          } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data.medicines)) {
-            allMedicines = allResponse.data.data.medicines;
-          } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
-            allMedicines = allResponse.data.data;
-          }
-          
-          console.log('Total medicines fetched for manual filtering:', allMedicines.length);
-          
-          // Filter medicines by name and common name (case insensitive)
-          const lowerQuery = query.toLowerCase();
-          const nameMatches = allMedicines.filter(med => {
-            // Check if sections.Remedy exists and contains the query (medicine name)
-            if (med.sections && med.sections.Remedy) {
-              if (med.sections.Remedy.toLowerCase().includes(lowerQuery)) {
-                return true;
-              }
-            }
-            
-            // Check if name property exists and contains the query
-            if (med.name && med.name.toLowerCase().includes(lowerQuery)) {
-              return true;
-            }
-            
-            // Check if sections['Common Name'] exists and contains the query
-            if (med.sections && med.sections['Common Name']) {
-              if (med.sections['Common Name'].toLowerCase().includes(lowerQuery)) {
-                return true;
-              }
-            }
-            
-            // Also check if commonName exists directly
-            if (med.commonName && med.commonName.toLowerCase().includes(lowerQuery)) {
-              return true;
-            }
-            
-            return false;
-          });
-          
-          console.log('Manual filtering matches found:', nameMatches.length);
-          
-          if (nameMatches.length > 0) {
-            formattedData = nameMatches.map(formatMedicineData);
-          }
-        }
-        
-        return formattedData;
-      } catch (searchError) {
-        console.warn('Search endpoints failed, falling back to general endpoint:', searchError);
-        
-        // Fallback to the main medicines endpoint
-        const response = await api.get('/api/medicines', {
-          params: {
-            q: query, // Use 'q' parameter as a fallback
-            limit: options.limit || 20,
-            page: options.page || 1,
-          },
-        });
-        
-        console.log('Main endpoint response:', response.data);
-        
-        // Format the response data to match our frontend expectations
-        let formattedData = [];
-        
-        if (Array.isArray(response.data)) {
-          formattedData = response.data.map(formatMedicineData);
-        } else if (response.data && response.data.medicines && Array.isArray(response.data.medicines)) {
-          formattedData = response.data.medicines.map(formatMedicineData);
-        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-          formattedData = response.data.data.map(formatMedicineData);
-        }
-        
-        // If no results, try manual filtering
-        if (formattedData.length === 0) {
-          console.log('No results found with fallback, trying manual filtering');
-          // Get all medicines and filter manually
-          const allResponse = await api.get('/api/medicines', {
-            params: {
-              limit: 100, // Get more medicines to increase chance of finding matches
-              page: 1,
-            },
-          });
-          
-          let allMedicines = [];
-          
-          if (Array.isArray(allResponse.data)) {
-            allMedicines = allResponse.data;
-          } else if (allResponse.data && allResponse.data.medicines && Array.isArray(allResponse.data.medicines)) {
-            allMedicines = allResponse.data.medicines;
-          } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data.medicines)) {
-            allMedicines = allResponse.data.data.medicines;
-          } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
-            allMedicines = allResponse.data.data;
-          }
-          
-          console.log('Total medicines fetched for manual filtering:', allMedicines.length);
-          
-          // Filter medicines by name and common name (case insensitive)
-          const lowerQuery = query.toLowerCase();
-          const nameMatches = allMedicines.filter(med => {
-            // Check if sections.Remedy exists and contains the query (medicine name)
-            if (med.sections && med.sections.Remedy) {
-              if (med.sections.Remedy.toLowerCase().includes(lowerQuery)) {
-                return true;
-              }
-            }
-            
-            // Check if name property exists and contains the query
-            if (med.name && med.name.toLowerCase().includes(lowerQuery)) {
-              return true;
-            }
-            
-            // Check if sections['Common Name'] exists and contains the query
-            if (med.sections && med.sections['Common Name']) {
-              if (med.sections['Common Name'].toLowerCase().includes(lowerQuery)) {
-                return true;
-              }
-            }
-            
-            // Also check if commonName exists directly
-            if (med.commonName && med.commonName.toLowerCase().includes(lowerQuery)) {
-              return true;
-            }
-            
-            return false;
-          });
-          
-          console.log('Manual filtering matches found:', nameMatches.length);
-          
-          if (nameMatches.length > 0) {
-            formattedData = nameMatches.map(formatMedicineData);
-          }
-        }
-        
-        return formattedData;
+      // Fetch all medicines and filter client-side
+      // This is more reliable than trying different search endpoints
+      console.log('Fetching all medicines for client-side filtering...');
+      const allResponse = await api.get('/api/medicines', {
+        params: {
+          limit: 200, // Get more medicines for better search results
+          page: 1,
+        },
+      });
+      
+      console.log('All medicines response:', allResponse.data);
+      
+      let allMedicines = [];
+      
+      if (Array.isArray(allResponse.data)) {
+        allMedicines = allResponse.data;
+      } else if (allResponse.data && allResponse.data.medicines && Array.isArray(allResponse.data.medicines)) {
+        allMedicines = allResponse.data.medicines;
+      } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data.medicines)) {
+        allMedicines = allResponse.data.data.medicines;
+      } else if (allResponse.data && allResponse.data.data && Array.isArray(allResponse.data.data)) {
+        allMedicines = allResponse.data.data;
       }
+      
+      console.log('Total medicines fetched:', allMedicines.length);
+      
+      // Filter medicines by name, common name, and sections (case insensitive)
+      const lowerQuery = query.toLowerCase();
+      const nameMatches = allMedicines.filter(med => {
+        // Check if name property exists (from formatted data)
+        if (med.name && med.name.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+        
+        // Check if commonName exists (from formatted data)
+        if (med.commonName && med.commonName.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+        
+        // Check sections array (new format)
+        if (Array.isArray(med.sections)) {
+          return med.sections.some(section => {
+            if (section.section_name && section.section_text) {
+              return section.section_text.toLowerCase().includes(lowerQuery) ||
+                     section.section_name.toLowerCase().includes(lowerQuery);
+            }
+            return false;
+          });
+        }
+        
+        // Check sections object (old format)
+        if (med.sections && typeof med.sections === 'object') {
+          return Object.values(med.sections).some(value => 
+            value && typeof value === 'string' && value.toLowerCase().includes(lowerQuery)
+          );
+        }
+        
+        return false;
+      });
+      
+      console.log('Filtered matches found:', nameMatches.length);
+      
+      // Format and return results
+      const formattedData = nameMatches.map(formatMedicineData);
+      return formattedData;
+      
     } catch (error) {
       console.error('Error searching medicines:', error);
       
       // Log more details about the error
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
         console.error('Error response headers:', error.response.headers);
       } else if (error.request) {
-        // The request was made but no response was received
         console.error('Error request:', error.request);
       } else {
-        // Something happened in setting up the request that triggered an Error
         console.error('Error message:', error.message);
       }
       
@@ -404,28 +241,89 @@ const medicineApi = {
   getMedicineById: async (id) => {
     try {
       console.log(`Fetching medicine with ID: ${id}`);
-      const response = await api.get(`/api/medicines/${id}`);
-      console.log('API response for getMedicineById:', response.data);
       
-      // Check if we have the expected data structure
-      let medicineData = null;
-      
-      if (response.data) {
-        if (response.data.data && response.data.data.medicine) {
-          medicineData = response.data.data.medicine;
-        } else if (response.data.medicine) {
-          medicineData = response.data.medicine;
-        } else {
-          medicineData = response.data;
+      // WORKAROUND: If backend getMedicineById doesn't return sections,
+      // fetch from the list endpoint and find the medicine
+      try {
+        const response = await api.get(`/api/medicines/${id}`);
+        console.log('API response for getMedicineById:', response);
+        console.log('API response data:', response.data);
+        
+        // Check if we have the expected data structure
+        let medicineData = null;
+        
+        if (response.data) {
+          // Handle different response structures
+          if (response.data.data && response.data.data.medicine) {
+            console.log('Structure: data.data.medicine');
+            medicineData = response.data.data.medicine;
+          } else if (response.data.medicine) {
+            console.log('Structure: data.medicine');
+            medicineData = response.data.medicine;
+          } else if (response.data.data && typeof response.data.data === 'object') {
+            console.log('Structure: data.data (object)');
+            medicineData = response.data.data;
+          } else if (response.data.id && response.data.sections) {
+            // Direct medicine object with id and sections
+            console.log('Structure: direct medicine object with sections');
+            medicineData = response.data;
+          } else if (response.data.id) {
+            // Medicine object without sections - need to fetch from list
+            console.log('Structure: medicine without sections - will fetch from list');
+            medicineData = null;
+          } else {
+            // Fallback - try to use response.data directly
+            console.log('Structure: fallback to response.data');
+            medicineData = response.data;
+          }
         }
+        
+        // If medicineData has sections, use it
+        if (medicineData && medicineData.sections && Array.isArray(medicineData.sections) && medicineData.sections.length > 0) {
+          console.log('Medicine has sections, using it');
+          const formatted = formatMedicineData(medicineData);
+          console.log('Formatted medicine data:', formatted);
+          return formatted;
+        }
+        
+        // If no sections, fall through to workaround below
+        console.warn('Medicine data has no sections, trying workaround...');
+      } catch (singleError) {
+        console.warn('Single medicine endpoint failed, trying workaround:', singleError.message);
       }
       
-      // Format the medicine data to match our frontend expectations
-      if (medicineData) {
-        return formatMedicineData(medicineData);
+      // WORKAROUND: Fetch from list and find the medicine
+      console.log('Fetching from list endpoint as workaround...');
+      const listResponse = await api.get('/api/medicines', {
+        params: { limit: 100, page: 1 }
+      });
+      
+      console.log('List response:', listResponse.data);
+      
+      let medicines = [];
+      if (Array.isArray(listResponse.data)) {
+        medicines = listResponse.data;
+      } else if (listResponse.data.medicines && Array.isArray(listResponse.data.medicines)) {
+        medicines = listResponse.data.medicines;
+      } else if (listResponse.data.data && Array.isArray(listResponse.data.data)) {
+        medicines = listResponse.data.data;
       }
       
-      throw new Error('Medicine not found or invalid data structure');
+      console.log('Found medicines:', medicines.length);
+      
+      // Find the medicine by ID
+      const medicine = medicines.find(m => m.id == id || m._id == id);
+      
+      if (!medicine) {
+        throw new Error(`Medicine with ID ${id} not found`);
+      }
+      
+      console.log('Found medicine in list:', medicine);
+      
+      const formatted = formatMedicineData(medicine);
+      console.log('Formatted medicine data:', formatted);
+      return formatted;
+      
     } catch (error) {
       console.error(`Error fetching medicine ${id}:`, error);
       
@@ -460,7 +358,37 @@ const formatMedicineData = (medicine) => {
       commonName: '',
       description: 'No data available',
       properties: {},
-      url: ''
+      url: '',
+      sections: []
+    };
+  }
+  
+  // Helper function to extract section value from array format
+  const getSectionFromArray = (sections, sectionName) => {
+    if (Array.isArray(sections)) {
+      const section = sections.find(s => s.section_name === sectionName);
+      return section ? section.section_text : '';
+    }
+    return '';
+  };
+  
+  // Handle NEW database structure with sections as ARRAY
+  if (medicine.sections && Array.isArray(medicine.sections)) {
+    // Check if medicine already has a 'name' field (from getMedicines endpoint)
+    let medicineName = medicine.name || getSectionFromArray(medicine.sections, 'Remedy') || 'Unknown Medicine';
+    const commonName = getSectionFromArray(medicine.sections, 'Common Name') || '';
+    const description = getSectionFromArray(medicine.sections, 'General') || '';
+    
+    console.log(`Extracted from array - medicine: "${medicineName}", common: "${commonName}"`);
+    
+    return {
+      id: medicine.id || medicine._id || Math.random().toString(36).substring(2),
+      name: medicineName,
+      commonName: commonName,
+      description: description,
+      url: medicine.url || '',
+      sections: medicine.sections, // Keep array format for detail page
+      originalData: medicine
     };
   }
   
@@ -471,44 +399,28 @@ const formatMedicineData = (medicine) => {
       id: medicine._id || medicine.id || Math.random().toString(36).substring(2),
       commonName: medicine.commonName || '',
       properties: medicine.properties || {},
-      rawSections: medicine.rawSections || medicine.sections || {}
+      rawSections: medicine.rawSections || medicine.sections || {},
+      sections: medicine.sections || []
     };
   }
   
-  // Handle the specific data structure from the database with sections (as shown in the image)
-  if (medicine._id && medicine.sections) {
+  // Handle OLD structure with sections as OBJECT
+  if (medicine._id && medicine.sections && typeof medicine.sections === 'object' && !Array.isArray(medicine.sections)) {
     const { sections } = medicine;
     
-    // Extract common name and remedy name from sections
+    // Extract common name and remedy name from sections object
     const commonName = sections['Common Name'] || '';
     const medicineName = sections.Remedy || 'Unknown Remedy';
-    console.log(`Extracted medicine name: "${medicineName}", common name: "${commonName}"`);
+    console.log(`Extracted from object - medicine: "${medicineName}", common: "${commonName}"`);
     
     return {
       id: medicine._id,
       name: medicineName,
       commonName: commonName,
       description: sections.General || '',
-      // Keep the original URL for reference
-      url: medicine.url || '',
-      // Keep the original sections for reference - important for displaying all data
-      rawSections: sections,
-      // Keep the original object for reference
-      originalData: medicine
-    };
-  }
-  
-  // Handle the response format shown in the image
-  if (medicine._id && medicine.url && medicine.sections) {
-    const { sections } = medicine;
-    
-    return {
-      id: medicine._id,
-      name: sections.Remedy || 'Unknown Medicine',
-      commonName: sections['Common Name'] || '',
-      description: sections.General || '',
       url: medicine.url || '',
       rawSections: sections,
+      sections: medicine.sections,
       originalData: medicine
     };
   }
@@ -534,11 +446,9 @@ const formatMedicineData = (medicine) => {
       name: medicineName,
       commonName: commonName,
       description: medicine.description || '',
-      // Add URL if available
       url: medicine.url || '',
-      // Keep the original sections for reference
       rawSections: medicine.sections || {},
-      // Keep the original object for reference
+      sections: medicine.sections || [],
       originalData: medicine
     };
   }
@@ -584,9 +494,32 @@ const patientApi = {
    * @returns {Promise} Promise with patient details
    */
   getPatientById: async (id) => {
+    // Validate and clean the ID outside the try block so it's available in catch
+    if (!id) {
+      throw new Error('Invalid patient ID: ID is empty');
+    }
+    
+    // Clean the ID - remove any trailing slashes or whitespace
+    const cleanId = id.trim();
+    
     try {
-      console.log(`Fetching patient with ID: ${id}`);
-      const response = await api.get(`/api/patients/${id}`);
+      
+      console.log(`Fetching patient with ID: ${cleanId}`);
+      console.log(`API Base URL: ${import.meta.env.VITE_API_BASE_URL}`);
+      console.log(`Full API URL: ${import.meta.env.VITE_API_BASE_URL}/api/patients/${cleanId}`);
+      
+      let response;
+      
+      // Try with /api prefix first
+      try {
+        response = await api.get(`/api/patients/${cleanId}`);
+        console.log('GET request with /api prefix completed with status:', response.status);
+      } catch (prefixError) {
+        console.log('Error with /api prefix, trying without prefix:', prefixError.message);
+        // Try without the /api prefix as fallback
+        response = await api.get(`/patients/${cleanId}`);
+        console.log('GET request without /api prefix completed with status:', response.status);
+      }
       console.log('API response for getPatientById:', response);
       
       // Check if we have the expected data structure
@@ -629,7 +562,7 @@ const patientApi = {
       
       return patientData;
     } catch (error) {
-      console.error(`Error fetching patient ${id}:`, error);
+      console.error(`Error fetching patient ${cleanId}:`, error);
       throw error;
     }
   },
@@ -655,28 +588,30 @@ const patientApi = {
         occupation: patientData.occupation || '',
         
         // Contact Information
-        contactNumber: patientData.contactNumber || '',
+        contact: patientData.contact || patientData.contactNumber || '',
         alternateContactNumber: patientData.alternateContactNumber || '',
         email: patientData.email || '',
-        address: {
+        // Stringify the address object to prevent [object Object] issue
+        address: JSON.stringify({
           street: patientData.address?.street || '',
           city: patientData.address?.city || '',
           state: patientData.address?.state || '',
           postalCode: patientData.address?.postalCode || '',
           country: patientData.address?.country || ''
-        },
+        }),
         
         // Medical Information
-        allergies: Array.isArray(patientData.allergies) ? patientData.allergies : [],
-        chronicDiseases: Array.isArray(patientData.chronicDiseases) ? patientData.chronicDiseases : [],
+        // Stringify arrays and objects to prevent [object Object] issue
+        allergies: JSON.stringify(Array.isArray(patientData.allergies) ? patientData.allergies : []),
+        chronicDiseases: JSON.stringify(Array.isArray(patientData.chronicDiseases) ? patientData.chronicDiseases : []),
         familyHistory: patientData.familyHistory || '',
         pastMedicalHistory: patientData.pastMedicalHistory || '',
-        lifestyle: {
+        lifestyle: JSON.stringify({
           diet: patientData.lifestyle?.diet || '',
           exercise: patientData.lifestyle?.exercise || '',
           addictions: Array.isArray(patientData.lifestyle?.addictions) ? patientData.lifestyle.addictions : [],
           sleep: patientData.lifestyle?.sleep || ''
-        },
+        }),
         
         // Administrative
         registrationDate: patientData.registrationDate || new Date().toISOString(),
@@ -686,16 +621,16 @@ const patientApi = {
         
         // Custom fields for homeopathic practice
         constitutionalType: patientData.constitutionalType || '',
-        miasmaticBackground: Array.isArray(patientData.miasmaticBackground) ? patientData.miasmaticBackground : [],
-        mentals: Array.isArray(patientData.mentals) ? patientData.mentals : [],
-        physicals: Array.isArray(patientData.physicals) ? patientData.physicals : [],
-        modalities: {
+        miasmaticBackground: JSON.stringify(Array.isArray(patientData.miasmaticBackground) ? patientData.miasmaticBackground : []),
+        mentals: JSON.stringify(Array.isArray(patientData.mentals) ? patientData.mentals : []),
+        physicals: JSON.stringify(Array.isArray(patientData.physicals) ? patientData.physicals : []),
+        modalities: JSON.stringify({
           better: Array.isArray(patientData.modalities?.better) ? patientData.modalities.better : [],
           worse: Array.isArray(patientData.modalities?.worse) ? patientData.modalities.worse : []
-        },
+        }),
         
         // Visit information
-        visits: Array.isArray(patientData.visits) ? patientData.visits : []
+        visits: JSON.stringify(Array.isArray(patientData.visits) ? patientData.visits : [])
       };
       
       // Process first visit information into visits array if provided
@@ -733,14 +668,24 @@ if (patientData.firstVisitFollowUpDate) {
           });
         }
         
-        // Add the visit to the visits array
-        formattedData.visits.push(firstVisit);
+        // Parse the existing visits JSON string, add the new visit, and stringify again
+        let visitsArray = [];
+        try {
+          if (formattedData.visits) {
+            visitsArray = JSON.parse(formattedData.visits);
+          }
+        } catch (e) {
+          console.error('Error parsing visits JSON:', e);
+        }
+        
+        visitsArray.push(firstVisit);
+        formattedData.visits = JSON.stringify(visitsArray);
         
         // Update lastVisitDate to match the first visit date
         formattedData.lastVisitDate = firstVisit.date;
       }
       
-      console.log('Formatted patient data:', formattedData);
+      console.log('Formatted patient data (with stringified objects):', formattedData);
       const response = await api.post('/api/patients', formattedData);
       return response.data;
     } catch (error) {
@@ -767,8 +712,17 @@ if (patientData.firstVisitFollowUpDate) {
    * @returns {Promise} Promise with updated patient
    */
   updatePatient: async (id, patientData) => {
+    // Validate the ID and clean it outside the try block so it's available in catch
+    if (!id) {
+      throw new Error('Invalid patient ID for update: ID is empty');
+    }
+    
+    // Clean the ID - remove any trailing slashes or whitespace
+    const cleanId = id.trim();
+    
     try {
-      console.log(`Updating patient with ID: ${id}`);
+      console.log(`Updating patient with ID: ${cleanId}`);
+      console.log(`Full API URL: ${import.meta.env.VITE_API_BASE_URL}/api/patients/${cleanId}`);
       console.log('Patient data being sent:', patientData);
       
       // Format the data to match the backend schema
@@ -783,28 +737,30 @@ if (patientData.firstVisitFollowUpDate) {
         occupation: patientData.occupation || '',
         
         // Contact Information
-        contactNumber: patientData.contactNumber || '',
+        contact: patientData.contact || patientData.contactNumber || '',
         alternateContactNumber: patientData.alternateContactNumber || '',
         email: patientData.email || '',
-        address: {
+        // Stringify the address object to prevent [object Object] issue
+        address: JSON.stringify({
           street: patientData.address?.street || '',
           city: patientData.address?.city || '',
           state: patientData.address?.state || '',
           postalCode: patientData.address?.postalCode || '',
           country: patientData.address?.country || ''
-        },
+        }),
         
         // Medical Information
-        allergies: Array.isArray(patientData.allergies) ? patientData.allergies : [],
-        chronicDiseases: Array.isArray(patientData.chronicDiseases) ? patientData.chronicDiseases : [],
+        // Stringify arrays and objects to prevent [object Object] issue
+        allergies: JSON.stringify(Array.isArray(patientData.allergies) ? patientData.allergies : []),
+        chronicDiseases: JSON.stringify(Array.isArray(patientData.chronicDiseases) ? patientData.chronicDiseases : []),
         familyHistory: patientData.familyHistory || '',
         pastMedicalHistory: patientData.pastMedicalHistory || '',
-        lifestyle: {
+        lifestyle: JSON.stringify({
           diet: patientData.lifestyle?.diet || '',
           exercise: patientData.lifestyle?.exercise || '',
           addictions: Array.isArray(patientData.lifestyle?.addictions) ? patientData.lifestyle.addictions : [],
           sleep: patientData.lifestyle?.sleep || ''
-        },
+        }),
         
         // Administrative
         status: patientData.status || 'Active',
@@ -812,13 +768,13 @@ if (patientData.firstVisitFollowUpDate) {
         
         // Custom fields for homeopathic practice
         constitutionalType: patientData.constitutionalType || '',
-        miasmaticBackground: Array.isArray(patientData.miasmaticBackground) ? patientData.miasmaticBackground : [],
-        mentals: Array.isArray(patientData.mentals) ? patientData.mentals : [],
-        physicals: Array.isArray(patientData.physicals) ? patientData.physicals : [],
-        modalities: {
+        miasmaticBackground: JSON.stringify(Array.isArray(patientData.miasmaticBackground) ? patientData.miasmaticBackground : []),
+        mentals: JSON.stringify(Array.isArray(patientData.mentals) ? patientData.mentals : []),
+        physicals: JSON.stringify(Array.isArray(patientData.physicals) ? patientData.physicals : []),
+        modalities: JSON.stringify({
           better: Array.isArray(patientData.modalities?.better) ? patientData.modalities.better : [],
           worse: Array.isArray(patientData.modalities?.worse) ? patientData.modalities.worse : []
-        }
+        })
       };
       
       // Preserve dates if they exist
@@ -832,7 +788,7 @@ if (patientData.firstVisitFollowUpDate) {
       
       // Preserve visits if they exist
       if (Array.isArray(patientData.visits)) {
-        formattedData.visits = patientData.visits;
+        formattedData.visits = JSON.stringify(patientData.visits);
       }
       
       // Process first visit information into visits array if provided
@@ -847,18 +803,13 @@ if (patientData.firstVisitFollowUpDate) {
           prescriptions: []
         };
         
-        // // Add next-visit date if provided
-        // if (patientData.firstVisitFollowUpDate) {
-        //   firstVisit.followUpDate = patientData.firstVisitFollowUpDate;
-        // }
-
         // Add next-visit date if provided
-if (patientData.firstVisitFollowUpDate) {
-  // Use nextVisitDate as the field name
-  firstVisit.nextVisitDate = patientData.firstVisitFollowUpDate;
-  // Keep followUpDate for backend compatibility
-  firstVisit.followUpDate = patientData.firstVisitFollowUpDate;
-}
+        if (patientData.firstVisitFollowUpDate) {
+          // Use nextVisitDate as the field name
+          firstVisit.nextVisitDate = patientData.firstVisitFollowUpDate;
+          // Keep followUpDate for backend compatibility
+          firstVisit.followUpDate = patientData.firstVisitFollowUpDate;
+        }
         
         // Add prescription if medicine is provided
         if (patientData.firstVisitMedicine) {
@@ -872,27 +823,70 @@ if (patientData.firstVisitFollowUpDate) {
           });
         }
         
-        // Add the visit to the visits array
-        formattedData.visits.push(firstVisit);
+        // Parse the existing visits JSON string, add the new visit, and stringify again
+        let visitsArray = [];
+        try {
+          if (formattedData.visits) {
+            visitsArray = JSON.parse(formattedData.visits);
+          }
+        } catch (e) {
+          console.error('Error parsing visits JSON:', e);
+        }
+        
+        visitsArray.push(firstVisit);
+        formattedData.visits = JSON.stringify(visitsArray);
         
         // Update lastVisitDate to match the first visit date
         formattedData.lastVisitDate = firstVisit.date;
       }
       
       console.log('Formatted patient data for update:', formattedData);
-      const response = await api.put(`/api/patients/${id}`, formattedData);
-      console.log('API response for updatePatient:', response);
+      console.log(`API Base URL: ${import.meta.env.VITE_API_BASE_URL}`);
+      console.log(`Making PUT request to: ${import.meta.env.VITE_API_BASE_URL}/api/patients/${cleanId}`);
       
+      let response;
+      
+      // Try with /api prefix first
+      try {
+        response = await api.put(`/api/patients/${cleanId}`, formattedData);
+        console.log('PUT request with /api prefix completed with status:', response.status);
+      } catch (prefixError) {
+        console.log('Error with /api prefix, trying without prefix:', prefixError.message);
+        // Try without the /api prefix as fallback
+        response = await api.put(`/patients/${cleanId}`, formattedData);
+        console.log('PUT request without /api prefix completed with status:', response.status);
+      }
+      
+      console.log('API response for updatePatient:', response);
       return response.data;
     } catch (error) {
-      console.error(`Error updating patient ${id}:`, error);
+      console.error(`Error updating patient ${cleanId}:`, error);
       
       // Log more details about the error
       if (error.response) {
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+        console.error('Request URL:', error.config?.url);
+        console.error('Request method:', error.config?.method);
+        console.error('Request data:', error.config?.data);
+        
+        // Try one more approach - if we're getting 404, try with a different API structure
+        if (error.response.status === 404) {
+          console.log('Got 404, trying direct endpoint without /api prefix...');
+          try {
+            const directResponse = await api.put(`/patients/${cleanId}`, formattedData);
+            console.log('Direct endpoint worked!', directResponse);
+            return directResponse.data;
+          } catch (directError) {
+            console.error('Direct endpoint also failed:', directError.message);
+          }
+        }
       } else if (error.request) {
         console.error('Error request:', error.request);
+        console.error('Request URL:', error.config?.url);
+        console.error('Request method:', error.config?.method);
+        console.error('Request data:', error.config?.data);
       } else {
         console.error('Error message:', error.message);
       }
@@ -907,14 +901,157 @@ if (patientData.firstVisitFollowUpDate) {
    * @returns {Promise} Promise with deletion result
    */
   deletePatient: async (id) => {
+    // Validate and clean the ID outside the try block so it's available in catch
+    if (!id) {
+      throw new Error('Invalid patient ID: ID is empty');
+    }
+    
+    // Clean the ID - remove any trailing slashes or whitespace
+    const cleanId = id.trim();
+    
     try {
-      const response = await api.delete(`/api/patients/${id}`);
+      const response = await api.delete(`/api/patients/${cleanId}`);
       return response.data;
     } catch (error) {
-      console.error(`Error deleting patient ${id}:`, error);
+      console.error(`Error deleting patient ${cleanId}:`, error);
       throw error;
     }
   },
 };
 
-export { api as default, medicineApi, patientApi };
+// Appointment API functions
+const appointmentApi = {
+  /**
+   * Get all appointments
+   * @returns {Promise} Promise with appointments list
+   */
+  getAllAppointments: async () => {
+    try {
+      const response = await api.get('/api/appointments');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get appointments by patient ID
+   * @param {string} patientId - Patient ID
+   * @returns {Promise} Promise with patient's appointments
+   */
+  getAppointmentsByPatient: async (patientId) => {
+    if (!patientId) {
+      throw new Error('Invalid patient ID: ID is empty');
+    }
+    
+    try {
+      const response = await api.get(`/api/appointments/patient/${patientId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching appointments for patient ${patientId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get appointment by ID
+   * @param {string} id - Appointment ID
+   * @returns {Promise} Promise with appointment details
+   */
+  getAppointmentById: async (id) => {
+    if (!id) {
+      throw new Error('Invalid appointment ID: ID is empty');
+    }
+    
+    const cleanId = id.trim();
+    
+    try {
+      const response = await api.get(`/api/appointments/${cleanId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching appointment ${cleanId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new appointment
+   * @param {Object} appointmentData - Appointment data
+   * @returns {Promise} Promise with created appointment
+   */
+  createAppointment: async (appointmentData) => {
+    try {
+      console.log('Creating appointment with data:', appointmentData);
+      const response = await api.post('/api/appointments', appointmentData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update an existing appointment
+   * @param {string} id - Appointment ID
+   * @param {Object} appointmentData - Updated appointment data
+   * @returns {Promise} Promise with updated appointment
+   */
+  updateAppointment: async (id, appointmentData) => {
+    if (!id) {
+      throw new Error('Invalid appointment ID: ID is empty');
+    }
+    
+    const cleanId = id.trim();
+    
+    try {
+      const response = await api.put(`/api/appointments/${cleanId}`, appointmentData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating appointment ${cleanId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete an appointment
+   * @param {string} id - Appointment ID
+   * @returns {Promise} Promise with deletion result
+   */
+  deleteAppointment: async (id) => {
+    if (!id) {
+      throw new Error('Invalid appointment ID: ID is empty');
+    }
+    
+    const cleanId = id.trim();
+    
+    try {
+      const response = await api.delete(`/api/appointments/${cleanId}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting appointment ${cleanId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get available time slots for a specific date
+   * @param {string} date - Date in ISO format
+   * @returns {Promise} Promise with available time slots
+   */
+  getAvailableTimeSlots: async (date) => {
+    if (!date) {
+      throw new Error('Invalid date: Date is empty');
+    }
+    
+    try {
+      const response = await api.get(`/api/appointments/available-slots?date=${date}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching available time slots for ${date}:`, error);
+      throw error;
+    }
+  }
+};
+
+export { api as default, medicineApi, patientApi, appointmentApi };
