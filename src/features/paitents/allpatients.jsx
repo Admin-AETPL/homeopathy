@@ -12,10 +12,10 @@ const AllPatients = () => {
 
   const patientsPerPage = 10;
 
-  // Fetch patients on component mount and when page changes
+  // Fetch patients on component mount, when page changes, or when search term changes
   useEffect(() => {
     fetchPatients();
-  }, [currentPage]);
+  }, [currentPage, searchTerm]);
 
   // Fetch patients from API
   const fetchPatients = async () => {
@@ -26,10 +26,19 @@ const AllPatients = () => {
       // First, try to fetch with server-side pagination
       let response;
       try {
+        // Check if this is likely an ID search to use exact matching on the server
+        const isIdSearch = isLikelyPatientId(searchTerm);
+        const isNumericId = /^\d+$/.test(searchTerm);
+        
         response = await patientApi.getAllPatients({
           page: currentPage,
           limit: patientsPerPage,
-          filters: searchTerm ? { search: searchTerm } : {}
+          filters: searchTerm ? { 
+            search: searchTerm, 
+            searchFields: isNumericId ? ['id', '_id'] : ['name', 'email', 'contactNumber', 'contact', 'id', '_id'],
+            exactIdMatch: isIdSearch, // Flag for backend to use exact matching for IDs
+            numericIdSearch: isNumericId // Additional flag for numeric ID searches
+          } : {}
         });
       } catch (err) {
         console.warn('Error with paginated request, falling back to client-side pagination:', err);
@@ -67,11 +76,42 @@ const AllPatients = () => {
       // Apply client-side search if needed
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        patientsData = patientsData.filter(patient => 
-          (patient.name?.toLowerCase().includes(searchLower) ||
-           patient.contactNumber?.includes(searchTerm) ||
-           patient.email?.toLowerCase().includes(searchLower))
-        );
+        const isIdSearch = isLikelyPatientId(searchTerm);
+        
+        patientsData = patientsData.filter(patient => {
+          // For numeric or alphanumeric IDs that look like patient IDs
+          if (isIdSearch) {
+            // Check if patient ID exactly matches the search term
+            const patientId = patient.id?.toString() || patient._id?.toString() || '';
+            const exactIdMatch = patientId === searchTerm;
+            
+            // If it's a numeric ID search, only return exact ID matches
+            if (/^\d+$/.test(searchTerm)) {
+              return exactIdMatch;
+            }
+            
+            // For alphanumeric IDs, also include partial matches for other fields
+            return (
+              exactIdMatch ||
+              patient.name?.toLowerCase().includes(searchLower) ||
+              patient.contactNumber?.includes(searchTerm) ||
+              patient.contact?.includes(searchTerm) ||
+              patient.email?.toLowerCase().includes(searchLower)
+            );
+          } else {
+            // Regular partial matching for all fields when not searching by ID
+            return (
+              patient.name?.toLowerCase().includes(searchLower) ||
+              patient.contactNumber?.includes(searchTerm) ||
+              patient.contact?.includes(searchTerm) ||
+              patient.email?.toLowerCase().includes(searchLower) ||
+              // For non-ID searches, still allow partial ID matches
+              patient.id?.toString().includes(searchTerm) ||
+              patient._id?.toString().includes(searchTerm)
+            );
+          }
+        });
+        
         totalCount = patientsData.length;
       }
 
@@ -95,17 +135,29 @@ const AllPatients = () => {
     }
   };
 
+  // Helper function to check if search term is likely a patient ID
+  const isLikelyPatientId = (term) => {
+    if (!term) return false;
+    
+    // If the term is purely numeric, always treat it as an ID search
+    if (/^\d+$/.test(term)) return true;
+    
+    // For alphanumeric IDs, check if it matches the expected format
+    // Most IDs are alphanumeric and relatively short
+    return /^[a-zA-Z0-9]+$/.test(term) && term.length <= 24;
+  };
+
   // Handle patient search
   const handleSearch = (e) => {
     const newSearchTerm = e.target.value;
     setSearchTerm(newSearchTerm);
+    
     // Reset to first page when search term changes
     if (currentPage !== 1) {
       setCurrentPage(1);
-    } else {
-      // If already on first page, trigger a new search
-      fetchPatients();
     }
+    // No need to call fetchPatients() here as the useEffect will handle it
+    // when searchTerm or currentPage changes
   };
 
   // Use all patients for display (filtering is now done server-side)
@@ -171,7 +223,7 @@ const AllPatients = () => {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search patients by name, email or phone..."
+            placeholder="Search by name/email/phone or enter exact patient ID..."
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#90D1CA] pl-10"
             value={searchTerm}
             onChange={handleSearch}
@@ -206,6 +258,9 @@ const AllPatients = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient ID
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -229,6 +284,9 @@ const AllPatients = () => {
                 {filteredPatients.length > 0 ? (
                   filteredPatients.map((patient) => (
                     <tr key={patient._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-500">{patient.id || patient._id || 'N/A'}</div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{patient.name}</div>
                       </td>
@@ -269,7 +327,7 @@ const AllPatients = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
                       {searchTerm ? 'No patients match your search.' : 'No patients found.'}
                     </td>
                   </tr>

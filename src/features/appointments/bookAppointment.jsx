@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientApi } from '../../services/api';
+import { patientApi, appointmentApi } from '../../services/api';
+
+// No longer needed - using async/await with the real API
 
 const BookAppointment = () => {
   const navigate = useNavigate();
@@ -89,32 +91,35 @@ const BookAppointment = () => {
       // Format date and time for API
       const appointmentDateTime = new Date(`${formData.appointmentDate}T${formData.appointmentTime}`);
       
-      // Create appointment payload
+      // Extract date and time components for backend
+      const appointmentDate = formData.appointmentDate;
+      const appointmentTime = formData.appointmentTime;
+      
+      // Create appointment payload according to backend schema
       const appointmentData = {
         patientId: formData.patientId,
-        appointmentDateTime: appointmentDateTime.toISOString(),
-        duration: formData.duration,
+        appointmentDate: appointmentDate,
+        appointmentTime: appointmentTime,
+        durationMinutes: parseInt(formData.duration),
         appointmentType: formData.appointmentType,
         chiefComplaint: formData.chiefComplaint,
-        notes: formData.notes,
+        additionalNotes: formData.notes,
         status: formData.status
       };
 
-      // Here you would call your API to save the appointment
-      // const response = await api.createAppointment(appointmentData);
-      
-      // For now, we'll simulate a successful API call
       console.log('Appointment data to be sent:', appointmentData);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the actual API to create the appointment
+      const response = await appointmentApi.createAppointment(appointmentData);
+      console.log('Appointment created successfully:', response);
       
       setSuccess(true);
       
-      // Redirect to a confirmation page or appointment list
+      // Redirect to the appointments dashboard after a delay
       setTimeout(() => {
-        navigate(`/patients/${formData.patientId}`);
+        navigate('/appointments');
       }, 2000);
+      
     } catch (err) {
       console.error('Error booking appointment:', err);
       setError('Failed to book appointment. Please try again.');
@@ -123,21 +128,38 @@ const BookAppointment = () => {
     }
   };
 
-  // Get available time slots (this would typically come from your backend)
-  const getAvailableTimeSlots = () => {
-    const slots = [];
-    // Generate time slots from 9 AM to 5 PM in 30-minute increments
-    for (let hour = 9; hour < 17; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const formattedHour = hour.toString().padStart(2, '0');
-        const formattedMinute = minute.toString().padStart(2, '0');
-        slots.push(`${formattedHour}:${formattedMinute}`);
-      }
-    }
-    return slots;
-  };
+  // Using the delay utility function defined at the top of the file
 
-  const timeSlots = getAvailableTimeSlots();
+  // Get available time slots (this would typically come from your backend)
+  const [timeSlots, setTimeSlots] = useState([]);
+  
+  // Load available time slots when date changes
+  useEffect(() => {
+    const fetchAvailableTimeSlots = async () => {
+      if (!formData.appointmentDate) return;
+      
+      try {
+        // For now, we'll generate time slots locally
+        // In the future, this could be replaced with:
+        // const slots = await appointmentApi.getAvailableTimeSlots(formData.appointmentDate);
+        
+        const slots = [];
+        // Generate time slots from 9 AM to 5 PM in 30-minute increments
+        for (let hour = 9; hour < 17; hour++) {
+          for (let minute = 0; minute < 60; minute += 30) {
+            const formattedHour = hour.toString().padStart(2, '0');
+            const formattedMinute = minute.toString().padStart(2, '0');
+            slots.push(`${formattedHour}:${formattedMinute}`);
+          }
+        }
+        setTimeSlots(slots);
+      } catch (err) {
+        console.error('Error fetching available time slots:', err);
+      }
+    };
+    
+    fetchAvailableTimeSlots();
+  }, [formData.appointmentDate]);
 
   return (
     <div className="max-w-4xl mx-auto my-8 px-4">

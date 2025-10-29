@@ -9,7 +9,7 @@ const api = axios.create({
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
   },
-  timeout: 15000, // 15 seconds timeout for slower network connections
+  //timeout: 30000, // 15 seconds timeout for slower network connections
   // Important for cross-origin requests
   withCredentials: false
 });
@@ -993,43 +993,129 @@ const appointmentApi = {
 
   /**
    * Update an existing appointment
-   * @param {string} id - Appointment ID
+   * @param {string|number} id - Appointment ID
    * @param {Object} appointmentData - Updated appointment data
    * @returns {Promise} Promise with updated appointment
    */
   updateAppointment: async (id, appointmentData) => {
-    if (!id) {
+    if (!id && id !== 0) {
       throw new Error('Invalid appointment ID: ID is empty');
     }
     
-    const cleanId = id.trim();
+    // Ensure the ID is a number or a clean string
+    let cleanId;
+    if (typeof id === 'string') {
+      // Remove any non-numeric characters if the ID should be numeric
+      cleanId = id.trim();
+      // If the ID is purely numeric, convert it to a number
+      if (/^\d+$/.test(cleanId)) {
+        cleanId = parseInt(cleanId, 10);
+      }
+    } else if (typeof id === 'number') {
+      cleanId = id;
+    } else {
+      throw new Error(`Invalid appointment ID type: ${typeof id}`);
+    }
+    
+    console.log(`Updating appointment with ID: ${cleanId} (type: ${typeof cleanId})`);
+    console.log('Appointment data being sent:', appointmentData);
+    
+    // Ensure patientId is properly handled in the data
+    if (appointmentData.patientId) {
+      if (typeof appointmentData.patientId === 'string' && /^\d+$/.test(appointmentData.patientId)) {
+        appointmentData.patientId = parseInt(appointmentData.patientId, 10);
+      }
+    }
     
     try {
-      const response = await api.put(`/api/appointments/${cleanId}`, appointmentData);
-      return response.data;
+      // Try with /api prefix first
+      try {
+        console.log(`Trying PUT with /api prefix: /api/appointments/${cleanId}`);
+        const response = await api.put(`/api/appointments/${cleanId}`, appointmentData);
+        console.log('PUT request with /api prefix completed with status:', response.status);
+        return response.data;
+      } catch (prefixError) {
+        console.log('Error with /api prefix, trying without prefix:', prefixError.message);
+        // Try without the /api prefix as fallback
+        console.log(`Trying PUT without /api prefix: /appointments/${cleanId}`);
+        const response = await api.put(`/appointments/${cleanId}`, appointmentData);
+        console.log('PUT request without /api prefix completed with status:', response.status);
+        return response.data;
+      }
     } catch (error) {
       console.error(`Error updating appointment ${cleanId}:`, error);
+      
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+      
       throw error;
     }
   },
 
   /**
    * Delete an appointment
-   * @param {string} id - Appointment ID
+   * @param {string|number} id - Appointment ID
    * @returns {Promise} Promise with deletion result
    */
   deleteAppointment: async (id) => {
-    if (!id) {
+    if (!id && id !== 0) {
       throw new Error('Invalid appointment ID: ID is empty');
     }
     
-    const cleanId = id.trim();
+    // Ensure the ID is a number or a clean string
+    let cleanId;
+    if (typeof id === 'string') {
+      // Remove any non-numeric characters if the ID should be numeric
+      cleanId = id.trim();
+      // If the ID is purely numeric, convert it to a number
+      if (/^\d+$/.test(cleanId)) {
+        cleanId = parseInt(cleanId, 10);
+      }
+    } else if (typeof id === 'number') {
+      cleanId = id;
+    } else {
+      throw new Error(`Invalid appointment ID type: ${typeof id}`);
+    }
+    
+    console.log(`Attempting to delete appointment with ID: ${cleanId} (type: ${typeof cleanId})`);
     
     try {
-      const response = await api.delete(`/api/appointments/${cleanId}`);
-      return response.data;
+      // Try with /api prefix first
+      try {
+        console.log(`Trying DELETE with /api prefix: /api/appointments/${cleanId}`);
+        const response = await api.delete(`/api/appointments/${cleanId}`);
+        console.log('DELETE request with /api prefix completed with status:', response.status);
+        return response.data;
+      } catch (prefixError) {
+        console.log('Error with /api prefix, trying without prefix:', prefixError.message);
+        // Try without the /api prefix as fallback
+        console.log(`Trying DELETE without /api prefix: /appointments/${cleanId}`);
+        const response = await api.delete(`/appointments/${cleanId}`);
+        console.log('DELETE request without /api prefix completed with status:', response.status);
+        return response.data;
+      }
     } catch (error) {
       console.error(`Error deleting appointment ${cleanId}:`, error);
+      
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+      } else {
+        console.error('Error message:', error.message);
+      }
+      
       throw error;
     }
   },
