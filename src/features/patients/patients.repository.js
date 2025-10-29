@@ -85,7 +85,11 @@ class PatientsRepository {
 
   async search(query) {
     try {
-      const rows = await this.dbManager.all('SELECT * FROM patients WHERE name LIKE ?', [`%${query}%`]);
+      console.log(query);
+      const rows = await this.dbManager.all(
+        'SELECT * FROM patients WHERE id = ? OR name LIKE ?',
+        [query, `%${query}%`]
+      );
       return rows;
     } catch (err) {
       throw new Error(`Failed to search patients: ${err.message}`);

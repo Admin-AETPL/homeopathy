@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs').promises;
 
 class DatabaseManager {
   constructor() {
@@ -37,7 +38,7 @@ class DatabaseManager {
       console.log('Initializing database connection...');
       console.log('Database path:', dbPath);
 
-      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE | sqlite3.OPEN_FULLMUTEX, (err) => {
         if (err) {
           console.error('Error opening database:', err.message);
           this.isConnected = false;
@@ -100,9 +101,9 @@ class DatabaseManager {
    * Setup database tables and initial configuration
    * @private
    */
-  _setupDatabase() {
+  async _setupDatabase() {
     // Configure SQLite for better concurrency and error handling
-    this.db.configure('busyTimeout', 30000); // 30 second timeout for busy database
+    this.db.configure('busyTimeout', 60000); // 60 second timeout for busy database
     
     // Enable foreign keys
     this.db.run('PRAGMA foreign_keys = ON');
@@ -111,12 +112,15 @@ class DatabaseManager {
     this.db.run('PRAGMA journal_mode = WAL');
     
     // Set busy timeout at SQL level as well
-    this.db.run('PRAGMA busy_timeout = 30000');
+    this.db.run('PRAGMA busy_timeout = 60000');
     
     // Optimize for better performance
     this.db.run('PRAGMA synchronous = NORMAL');
     this.db.run('PRAGMA cache_size = 10000');
     this.db.run('PRAGMA temp_store = MEMORY');
+    
+    // Run migrations
+    await this._runMigrations();
     
     console.log('Database configuration applied');
   }
@@ -285,6 +289,45 @@ class DatabaseManager {
    */
   isDbConnected() {
     return this.isConnected;
+  }
+
+  /**
+   * Run database migrations
+   * @private
+   */
+  async _runMigrations() {
+    try {
+      const migrationsPath = path.join(__dirname, 'migrations');
+      const files = await fs.readdir(migrationsPath);
+      
+      // Sort migration files to ensure order
+      const migrationFiles = files
+        .filter(file => file.endsWith('.sql'))
+        .sort();
+
+      for (const file of migrationFiles) {
+        const filePath = path.join(migrationsPath, file);
+        const sql = await fs.readFile(filePath, 'utf8');
+        
+        await new Promise((resolve, reject) => {
+          this.db.exec(sql, (err) => {
+            if (err) {
+              console.error(`Error running migration ${file}:`, err);
+              reject(err);
+            } else {
+              console.log(`Successfully ran migration: ${file}`);
+              resolve();
+            }
+          });
+        });
+      }
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        console.log('No migrations directory found. Skipping migrations.');
+      } else {
+        throw err;
+      }
+    }
   }
 }
 
